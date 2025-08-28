@@ -17,27 +17,36 @@ struct CharacterListView: View {
     var body: some View {
         NavigationView {
             List {
-                ForEach(vm.characters) { character in
-                    NavigationLink(destination: CharacterDetailView(viewModel: CharacterDetailViewModel(character: character))) {
+                ForEach(vm.filteredCharacters) { character in
+                    NavigationLink(
+                        destination: CharacterDetailView(viewModel: CharacterDetailViewModel(character: character))
+                    ) {
                         CharacterRow(character: character)
                             .padding(.vertical, 6)
                     }
                 }
-                if vm.isLoading {
-                    HStack {
-                        Spacer()
-                        ProgressView()
-                        Spacer()
-                    }
-                } else {
-                    Color.clear.onAppear {
-                        Task {
-                            await vm.load(page: vm.page + 1)
+
+                if !vm.showFavoritesOnly {
+                    if vm.isLoading {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
+                        }
+                    } else {
+                        Color.clear.onAppear {
+                            Task {
+                                await vm.load(page: vm.page + 1)
+                            }
                         }
                     }
                 }
             }
             .navigationTitle("Characters")
+            .toolbar {
+                Toggle("Favoritos", isOn: $vm.showFavoritesOnly)
+                    .toggleStyle(.switch)
+            }
             .refreshable {
                 await vm.refresh()
             }
@@ -52,6 +61,7 @@ struct CharacterListView: View {
         }
     }
 }
+
 
 // MARK: - CharacterRow
 struct CharacterRow: View {

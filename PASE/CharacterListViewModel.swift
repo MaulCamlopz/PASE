@@ -14,11 +14,20 @@ final class CharacterListViewModel: ObservableObject {
     @Published var isLoading: Bool = false
     @Published var page: Int = 1
     @Published var errorMessage: String?
+    @Published var showFavoritesOnly: Bool = false
 
     private let network: NetworkServiceType
+    private let favorites = FavoritesStore.shared
 
     init(network: NetworkServiceType = NetworkService()) {
         self.network = network
+    }
+
+    var filteredCharacters: [RMCharacter] {
+        if showFavoritesOnly {
+            return characters.filter { favorites.isFavorite(id: $0.id) }
+        }
+        return characters
     }
 
     func load(page: Int = 1) async {
