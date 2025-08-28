@@ -13,7 +13,11 @@ import MapKit
 struct CharacterListView: View {
     @StateObject private var vm = CharacterListViewModel()
     @State private var showingError = false
-
+    
+    @State private var wantsFavorites = false   // estado del toggle
+    @State private var biometricAlertMessage: String? = nil
+    @State private var showBiometricAlert = false
+    
     var body: some View {
         NavigationView {
             List {
@@ -44,8 +48,35 @@ struct CharacterListView: View {
             }
             .navigationTitle("Characters")
             .toolbar {
-                Toggle("Favoritos", isOn: $vm.showFavoritesOnly)
+                Toggle("Favoritos", isOn: $wantsFavorites)
                     .toggleStyle(.switch)
+                    .onChange(of: wantsFavorites) { newValue in
+                        Task {
+                            if newValue {
+                                let result = await BiometricAuth.authenticate(reason: "Ver personajes favoritos")
+                                switch result {
+                                case .success:
+                                    vm.showFavoritesOnly = true
+                                case .failed:
+                                    biometricAlertMessage = "No se pudo autenticar con FaceID/TouchID."
+                                    showBiometricAlert = true
+                                    wantsFavorites = false
+                                case .unavailable:
+                                    biometricAlertMessage = "Debes activar FaceID o TouchID en Configuración para usar esta función."
+                                    showBiometricAlert = true
+                                    wantsFavorites = false
+
+                                }
+                            } else {
+                                vm.showFavoritesOnly = false
+                            }
+                        }
+                    }
+            }
+            .alert("Autenticación requerida", isPresented: $showBiometricAlert) {
+                Button("OK", role: .cancel) { }
+            } message: {
+                Text(biometricAlertMessage ?? "")
             }
             .refreshable {
                 await vm.refresh()
@@ -61,6 +92,8 @@ struct CharacterListView: View {
         }
     }
 }
+
+
 
 
 // MARK: - CharacterRow
